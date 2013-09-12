@@ -89,12 +89,12 @@ $(document).ready(function(){
         termsOfService: 'http://example.com/tos.html',
         privacyPolicy: 'http://example.com/privacy.html'
     });
-
+console.log('setting current user to ', localStorage.getItem('owapersonauser'));
     persona.watch({
-        loggedInUser: currentUser(),
+        loggedInUser: localStorage.getItem('owapersonauser'),
         onlogin: function(email) {
             console.log('APP ON LOGIN called with email=', email);
-
+            localStorage.setItem('owapersonauser', email);
 
         },
         onlogout: function() {
@@ -103,6 +103,7 @@ $(document).ready(function(){
             // Also, make sure loggedInUser will get set to null on the next page load.
             // (That's a literal JavaScript null. Not false, 0, or undefined. null.)
             console.log('APP ON LOGOUT called, clearing with ');
+            localStorage.removeItem('owapersonauser');
             //TODO store current user in localStorage
             // You can do anything here...
             $.ajax({

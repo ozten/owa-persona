@@ -126,8 +126,15 @@ function setupWatch(wParams) {
         console.log('ON READY');
         if (! authWidgetDrawn) {
             console.log('showing and hidding');
-            $('#signout').hide();
-            $('#signin').show();
+            if (! loggedInUser) {
+                $('#signout').hide();
+                $('#signin').show();
+            } else {
+
+                $('#signin').hide();
+                $('#signout').show();
+            }
+
         }
       }
     });
