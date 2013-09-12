@@ -1,4 +1,4 @@
-# Open Web App Persona
+# Open Web App Persona Library
 
 This library allows easy use of Persona from an Open Web App.
 
