@@ -5,12 +5,19 @@
 body {
     background-color: #CCC;
 }
+#signin, #signout {
+    display: none;
+}
 </style>
-<img src="/i/signin.png" />
-<img src="/i/signout.png" />
+<div id="signin"><img src="/i/signin.png" /></div>
+<div id="signout"><img src="/i/signout.png" /></div>
+<script src="/js/jquery-1.10.2.js"></script>
 <script src="https://login.persona.org/include.js"></script>
 <script>
-
+$(window).on('message', function(e) {
+    console.log('AUTH: ' + e.originalEvent.data);
+});
+window.parent.postMessage('ready', 'http://localhost:6661/owa.html');
 </script>
 </body>
 </html>

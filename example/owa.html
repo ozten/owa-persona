@@ -4,9 +4,37 @@
 <body>
 <script src="/jquery-1.10.2.js"></script>
 <script>
+var ready = false;
+$(window).on('message', function(e) {
+    console.log('APP: ' + e.originalEvent.data);
+    ready = true;
+});
 // owa_persona.js
 var OWAPersona = function(params) {
-    $('body').append('<iframe src="' + params.iframe + '"></iframe>');
+    $('body').append('<iframe id="owapersona" src="' + params.iframe + '"></iframe>');
+
+var win = window.frames[0];//$('#owapersona').get()[0].contentWindow;
+
+    function initFrame() {
+        if (ready) {
+            // window.frames[0].postMessage('foo', 'http://localhost:6660/authenticate.html')
+
+            console.log('sending a message to', params.iframe);
+            win.postMessage('foobar', params.iframe);
+        } else {
+            console.log('sleep');
+            setTimeout(initFrame, 100);
+        }
+
+    }
+
+    setTimeout(initFrame, 100);
+
+    var that = this;
+    that.watch = function(wParams) {
+
+    };
+    return that;
 };
 </script>
 <script>
@@ -30,6 +58,9 @@ $(document).ready(function(){
         }
     });
 });
+function currentUser() {
+    return null;
+}
 </script>
 </body>
 </html>
