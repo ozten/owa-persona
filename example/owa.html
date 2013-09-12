@@ -5,22 +5,40 @@
 <script src="/jquery-1.10.2.js"></script>
 <script>
 var ready = false;
+var requestSetup = false;
+var onlogin = function() {};
+var onlogout = function() {};
 $(window).on('message', function(e) {
     console.log('APP: ' + e.originalEvent.data);
-    ready = true;
+    var message = e.originalEvent.data.split('|');
+    if ('AUTH_FRAME_READY' === message[0]) {
+        ready = true;
+    } else if ('LOGIN' === message[0]) {
+        onlogin(message[1]);
+    } else if ('LOGOUT' === message[0]) {
+        onlogout();
+    } else {
+        throw new Error('APP unknown event type:' + message[0]);
+    }
 });
 // owa_persona.js
 var OWAPersona = function(params) {
+    var that = this;
+
     $('body').append('<iframe id="owapersona" src="' + params.iframe + '"></iframe>');
 
-var win = window.frames[0];//$('#owapersona').get()[0].contentWindow;
+    that.win = window.frames[0];//$('#owapersona').get()[0].contentWindow;
 
     function initFrame() {
         if (ready) {
             // window.frames[0].postMessage('foo', 'http://localhost:6660/authenticate.html')
 
             console.log('sending a message to', params.iframe);
-            win.postMessage('foobar', params.iframe);
+
+            requestSetup = true;
+            that.win.postMessage('SETUP_REQUEST|' +
+                JSON.stringify(params),
+                'http://localhost:6660/authenticate.html');
         } else {
             console.log('sleep');
             setTimeout(initFrame, 100);
@@ -30,9 +48,33 @@ var win = window.frames[0];//$('#owapersona').get()[0].contentWindow;
 
     setTimeout(initFrame, 100);
 
-    var that = this;
-    that.watch = function(wParams) {
 
+    that.watch = function(params) {
+        // Save a reference to callbacks which will be
+        // triggered via postMessage
+        if (params.onlogin) {
+            onlogin = params.onlogin;
+        }
+
+        if (params.onlogout) {
+            onlogout = params.onlogout;
+        }
+
+        function watchFrame() {
+            if (ready && requestSetup) {
+
+                that.win.postMessage('SETUP_WATCH|' +
+                    JSON.stringify({
+                    loggedInUser: params.loggedInUser
+                }),
+                    'http://localhost:6660/authenticate.html');
+            } else {
+                console.log('sleep country');
+                setTimeout(watchFrame, 100)
+            }
+        }
+
+        watchFrame();
     };
     return that;
 };
@@ -51,10 +93,30 @@ $(document).ready(function(){
     persona.watch({
         loggedInUser: currentUser(),
         onlogin: function(email) {
+            console.log('APP ON LOGIN called with email=', email);
+
 
         },
         onlogout: function() {
-
+            // A user has logged out! Here you need to:
+            // Tear down the user's session by redirecting the user or making a call to your backend.
+            // Also, make sure loggedInUser will get set to null on the next page load.
+            // (That's a literal JavaScript null. Not false, 0, or undefined. null.)
+            console.log('APP ON LOGOUT called, clearing with ');
+            //TODO store current user in localStorage
+            // You can do anything here...
+            $.ajax({
+              type: 'POST',
+              url: 'http://localhost:6660/logout',
+              success: function(res, status, xhr) {
+                    messageLogout();
+              },
+              error: function(xhr, status, err) {
+                console.log("Logout failure: " + err);
+            }});
+        },
+        onready: function() {
+            console.log('ON READY called');
         }
     });
 });

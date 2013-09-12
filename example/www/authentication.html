@@ -1,23 +1,137 @@
 <html>
-<body>
-<!-- Customize here to match your app -->
+<head>
 <style>
-body {
-    background-color: #CCC;
-}
 #signin, #signout {
     display: none;
 }
 </style>
+</head>
+<body>
+
+<!-- BEGIN Customize here to match your app -->
+<style>
+body {
+    background-color: #CCC;
+}
+</style>
 <div id="signin"><img src="/i/signin.png" /></div>
 <div id="signout"><img src="/i/signout.png" /></div>
+<!-- END Customize here to match your app -->
+
 <script src="/js/jquery-1.10.2.js"></script>
 <script src="https://login.persona.org/include.js"></script>
 <script>
+var didSetupRequest = false;
+var didSetupWatch = false;
+var loggedInUser;
+var postAssertionUrl;
+var authWidgetDrawn = false;
+
 $(window).on('message', function(e) {
-    console.log('AUTH: ' + e.originalEvent.data);
+    console.log('AUTH: ' + e.originalEvent.data.split('|'));
+    var message = e.originalEvent.data.split('|');
+    if ('SETUP_REQUEST' === message[0]) {
+        if (! didSetupRequest) {
+            didSetupRequest = true;
+            setupRequest(JSON.parse(message[1]));
+        } else {
+            throw new Error("Singleton constructor, setup only once");
+        }
+    } else if ('SETUP_WATCH' === message[0]) {
+        if (! didSetupWatch) {
+            didSetupWatch = true;
+            console.log('setting up watch with ' + JSON.parse(message[1]));
+            setupWatch(JSON.parse(message[1]));
+        } else {
+            throw new Error("watch can only be called once");
+        }
+    } else {
+        throw new Error("Unknown message type: " + message[0]);
+    }
+
 });
-window.parent.postMessage('ready', 'http://localhost:6661/owa.html');
+
+window.parent.postMessage('AUTH_FRAME_READY', 'http://localhost:6661/owa.html');
+
+function messageLogin(email) {
+    window.parent.postMessage('LOGIN|' + email,
+        'http://localhost:6661/owa.html');
+
+}
+
+function messageLogout() {
+    window.parent.postMessage('LOGOUT',
+        'http://localhost:6661/owa.html');
+}
+
+function setupRequest(params) {
+    var signinLink = document.getElementById('signin');
+    if (signinLink) {
+        signinLink.onclick = function() {
+            console.log('setting up request', params);
+            postAssertionUrl = params.postAssertion;
+            delete params.iframe;
+            delete params.postAssertion;
+            navigator.id.request(params);
+        };
+    }
+}
+
+var signoutLink = document.getElementById('signout');
+if (signoutLink) {
+  signoutLink.onclick = function() { navigator.id.logout(); };
+}
+
+//var currentUser = 'bob@example.com';
+
+function setupWatch(wParams) {
+    console.log('Setting up watch with ', wParams);
+    loggedInUser = wParams.loggedInUser;
+    navigator.id.watch({
+      // TODO refine not specifiying versus null versus undefined
+      loggedInUser: loggedInUser,
+      onlogin: function(assertion) {
+        // A user has logged in! Here you need to:
+        // 1. Send the assertion to your backend for verification and to create a session.
+        // 2. Update your UI.
+        console.log('ON LOGIN will POST to', wParams.postAssertion);
+        $.ajax({ /* <-- This example uses jQuery, but you can use whatever you'd like */
+          type: 'POST',
+          url: postAssertionUrl,
+          dataType: 'json',
+          data: {assertion: assertion},
+          success: function(res, status, xhr) {
+            //window.location.reload();
+            console.log('AJAX response=', res);
+            authWidgetDrawn = true;
+            $('#signin').hide();
+            $('#signout').show();
+
+            messageLogin(res.email);
+          },
+          error: function(xhr, status, err) {
+            console.log("Login failure, logging user out: " + err);
+            navigator.id.logout();
+          }
+        });
+      },
+      onlogout: function() {
+        console.log('ON LOGOUT');
+        authWidgetDrawn = true;
+        $('#signout').hide();
+        $('#signin').show();
+        messageLogout();
+      },
+      onready: function() {
+        console.log('ON READY');
+        if (! authWidgetDrawn) {
+            console.log('showing and hidding');
+            $('#signout').hide();
+            $('#signin').show();
+        }
+      }
+    });
+}
 </script>
 </body>
 </html>
