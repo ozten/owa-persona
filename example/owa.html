@@ -1,0 +1,35 @@
+<html>
+<head>
+<title>Photo Streamr</title>
+<body>
+<script src="/jquery-1.10.2.js"></script>
+<script>
+// owa_persona.js
+var OWAPersona = function(params) {
+    $('body').append('<iframe src="' + params.iframe + '"></iframe>');
+};
+</script>
+<script>
+// Code local to this app
+$(document).ready(function(){
+    var persona = new OWAPersona({
+        iframe: 'http://localhost:6660/authentication.html',
+        postAssertion: 'http://localhost:6660/verify_persona_assertion',
+        siteName: 'Example Website',
+        termsOfService: 'http://example.com/tos.html',
+        privacyPolicy: 'http://example.com/privacy.html'
+    });
+
+    persona.watch({
+        loggedInUser: currentUser(),
+        onlogin: function(email) {
+
+        },
+        onlogout: function() {
+
+        }
+    });
+});
+</script>
+</body>
+</html>
